@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Series-parallel circuit practice</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:#fff}
+*,*::before,*::after{box-sizing:inherit}
+html,body,h1,h2,h3,p,ul,li,table{margin:0;padding:0;border:0;font-weight:normal;font-family:inherit}
+body{background:#fff;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#535557;width:100%;margin:0 auto;padding:0 80px 20px 80px}
+h1,h2{width:100%;font-size:16px;color:#fff;background-color:#007f64;line-height:1}
+h1{padding:15px 15px 10px 15px;font-weight:bold;text-transform:uppercase}
+h2{padding:0 15px 15px 15px;font-style:italic}
+h3{width:100%;margin-top:40px;font-size:14px;line-height:1;font-weight:bold;text-transform:uppercase;color:#007f64;border-bottom:2px solid}
+p,li,table{line-height:145%;font-size:14px;color:#535557}
+p,ul{margin-top:15px}
+li{margin-left:40px;list-style-type:square}
+.tab{display:flex;flex-wrap:wrap;overflow:hidden;background-color:#007f64}
+.tab button,.actions button{font:inherit;font-size:16px;background-color:inherit;border:1px solid #000;outline:none;cursor:pointer;padding:14px 16px;transition:.3s;color:#fff}
+.actions button{background-color:#007f64}
+.tab button:hover,.actions button:hover{background-color:#ddd;color:#000}
+.tab button.active{background-color:#3de0bd;color:#000}
+.tab button:focus-visible,.actions button:focus-visible,input:focus-visible{outline:3px solid #000;outline-offset:-3px}
+.actions{display:flex;flex-wrap:wrap;margin-top:15px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 40px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}body{padding:0 16px 20px 16px}}
+svg{display:block;width:100%;max-width:640px;height:auto;margin:15px auto 0}
+.w{stroke:#3a3c3e;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.dot{fill:#3a3c3e}
+.lbl{fill:#3a3c3e;font:bold 14px Arial,Helvetica,sans-serif;text-anchor:middle}
+.scroll{overflow-x:auto;margin-top:15px}
+table{border-collapse:collapse;width:100%;min-width:480px;font-variant-numeric:tabular-nums}
+table,th,td{border:1px solid #aaabab}
+th,td{padding:5px;text-align:right}
+th{font-weight:bold;color:#fff;background:#007f64;border-color:#aaabab}
+th small{display:block;font-weight:normal}
+th:first-child,td:first-child{text-align:left;font-weight:bold}
+td.tc,th.tc{border-right:2px solid #535557}
+td.given{background:#cdeee6;font-weight:bold}
+input{width:100%;min-width:5.2rem;font:inherit;font-variant-numeric:tabular-nums;text-align:right;color:#535557;background:#fff;border:0;border-bottom:2px dashed #535557;border-radius:0;padding:4px}
+input.ok{background:#d5eedb;border-bottom:2px solid #1b7a3d;color:#1b7a3d;font-weight:bold}
+input.bad{background:#f8ddd4;border-bottom:2px solid #d52b1e;color:#d52b1e;font-weight:bold}
+input.shown{border-bottom-style:solid;color:#8c8b8a}
+.sw{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-right:6px;border:1px solid #aaabab}
+.sw.g{background:#cdeee6}.sw.b{border-style:dashed;border-width:0 0 2px;border-color:#535557}
+#msg{font-weight:bold;min-height:1.6em;color:#007f64}
+p#footer{width:100%;margin:45px 0 0 0;padding-top:15px;border-top:1px solid;text-align:center;color:#aaabab}
+</style>
+</head>
+<body id="mse">
+<h1>Series-parallel circuit practice</h1>
+<h2>Fill in every blank cell. The shaded cells are given.</h2>
+<div class="tab" role="group" aria-label="Number of resistors">
+  <button data-size="0" class="active" aria-pressed="true">Any size</button>
+  <button data-size="3" aria-pressed="false">3 resistors</button>
+  <button data-size="4" aria-pressed="false">4 resistors</button>
+  <button data-size="5" aria-pressed="false">5 resistors</button>
+</div>
+<div class="grid">
+  <div>
+    <h3>Circuit</h3>
+    <div id="diagram"></div>
+    <h3>Formulas</h3>
+    <ul>
+      <li>V = I × R</li>
+      <li>P = V × I = I² × R = V² ÷ R</li>
+      <li>Series: current is the same, voltages add, resistances add.</li>
+      <li>Parallel: voltage is the same, currents add, 1/R<sub>total</sub> = 1/R<sub>1</sub> + 1/R<sub>2</sub> + …</li>
+    </ul>
+  </div>
+  <div>
+    <h3>Values</h3>
+    <div class="scroll"><table id="tbl"></table></div>
+    <p><span><i class="sw g"></i>Given</span> &nbsp; <span><i class="sw b"></i>Your answer</span></p>
+    <div class="actions">
+      <button id="check">Check answers</button>
+      <button id="reveal">Show answers</button>
+      <button id="new">New circuit</button>
+    </div>
+    <p id="msg" role="status" aria-live="polite"></p>
+  </div>
+</div>
+<p id="footer">Answers within 2% count as correct. The Total row is the whole circuit, so its voltage is the source voltage.</p>
+<script>
+(function(){
+const KEYS=["V","I","R","P"];
+const RVALS=[47,68,100,150,220,330,470,680,1000];
+const VVALS=[5,9,12,15,24,36,48];
+const TEMPLATES=[
+ ["S","R",["P","R","R"]],
+ ["S",["P","R","R"],"R"],
+ ["S","R",["P","R","R"],"R"],
+ ["S","R",["P","R",["S","R","R"]]],
+ ["S",["P","R","R"],["P","R","R"]],
+ ["P","R",["S","R",["P","R","R"]]],
+ ["P",["S","R","R"],["S","R","R"]],
+ ["S","R",["P","R","R","R"]],
+ ["S","R",["P","R",["S","R","R"]],"R"],
+ ["S",["P","R","R","R"],["P","R","R"]],
+ ["P",["S","R","R"],["S","R",["P","R","R"]]]
+];
+const $=s=>document.querySelector(s);
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const pick=a=>a[Math.random()*a.length|0];
+const count=t=>t==="R"?1:t.slice(1).reduce((s,k)=>s+count(k),0);
+const fmt=(x,p)=>String(parseFloat(x.toPrecision(p||4)));
+let st={};
+
+function mk(t,c){
+  if(t==="R"){const n={kind:"R",kids:[],label:"R"+(++c.n)};c.all.push(n);c.leaves.push(n);return n}
+  const n={kind:t[0],kids:t.slice(1).map(k=>mk(k,c)),label:"Total"};
+  c.all.push(n);return n;
+}
+const blank=()=>({V:null,I:null,R:null,P:null});
+
+function propagate(all){
+  let ch=true,g=0;
+  const set=(n,k,v)=>{if(n.q[k]==null&&isFinite(v)&&v>0){n.q[k]=v;ch=true}};
+  const eq=(n,k)=>{const c=[n,...n.kids],kn=c.find(x=>x.q[k]!=null);if(kn)c.forEach(x=>set(x,k,kn.q[k]))};
+  const rel=(n,k,inv)=>{
+    const f=inv?x=>1/x:x=>x,c=[n,...n.kids],u=c.filter(x=>x.q[k]==null);
+    if(u.length!==1)return;
+    const t=c[0],parts=c.slice(1);
+    if(u[0]===t)set(t,k,f(parts.reduce((s,p)=>s+f(p.q[k]),0)));
+    else set(u[0],k,f(f(t.q[k])-parts.filter(p=>p!==u[0]).reduce((s,p)=>s+f(p.q[k]),0)));
+  };
+  while(ch&&g++<80){
+    ch=false;
+    for(const n of all){
+      const q=n.q,has=k=>q[k]!=null;
+      if(has("V")&&has("I")){set(n,"R",q.V/q.I);set(n,"P",q.V*q.I)}
+      if(has("V")&&has("R")){set(n,"I",q.V/q.R);set(n,"P",q.V*q.V/q.R)}
+      if(has("I")&&has("R")){set(n,"V",q.I*q.R);set(n,"P",q.I*q.I*q.R)}
+      if(has("P")&&has("V")){set(n,"I",q.P/q.V);set(n,"R",q.V*q.V/q.P)}
+      if(has("P")&&has("I")){set(n,"V",q.P/q.I);set(n,"R",q.P/(q.I*q.I))}
+      if(has("P")&&has("R")){set(n,"V",Math.sqrt(q.P*q.R));set(n,"I",Math.sqrt(q.P/q.R))}
+      if(n.kind==="S"){eq(n,"I");rel(n,"V");rel(n,"P");rel(n,"R")}
+      if(n.kind==="P"){eq(n,"V");rel(n,"I");rel(n,"P");rel(n,"R",true)}
+    }
+  }
+}
+
+function newProblem(){
+  const want=+document.querySelector(".tab button.active").dataset.size;
+  const opts=TEMPLATES.filter(t=>!want||count(t)===want);
+  const tpl=pick(opts),c={n:0,all:[],leaves:[]};
+  const root=mk(tpl,c);
+  const rs=shuffle(RVALS);
+  c.leaves.forEach((l,i)=>l.fixed=rs[i]);
+  const vs=pick(VVALS);
+  const run=given=>{
+    c.all.forEach(n=>n.q=blank());
+    given();
+    propagate(c.all);
+  };
+  run(()=>{c.leaves.forEach(l=>l.q.R=l.fixed);root.q.V=vs});
+  const rows=[...c.leaves,root];
+  rows.forEach(r=>r.ans={...r.q});
+  const cells=rows.flatMap(r=>KEYS.map(k=>({row:r,k,val:r.ans[k]})));
+  const solvable=set=>{
+    run(()=>set.forEach(x=>{x.row.q[x.k]=x.val}));
+    return rows.every(r=>KEYS.every(k=>r.q[k]!=null));
+  };
+  const given=new Set(cells);
+  for(const x of shuffle(cells)){
+    given.delete(x);
+    if(!solvable([...given]))given.add(x);
+  }
+  st={root,rows,given,cells,all:c.all};
+  draw();table();
+  $("#msg").textContent="";
+}
+
+/* ---------- schematic ---------- */
+const GAP=22,PAD=22,PG=14;
+const ZZ=(()=>{let d="M0 0H14";for(let i=0;i<6;i++)d+=`L${(14+(i+.5)*(52/6)).toFixed(1)} ${i%2?8:-8}`;return d+"L66 0H80"})();
+function measure(n){
+  if(n.kind==="R"){n.w=80;n.h=44;n.cy=30;return}
+  n.kids.forEach(measure);
+  if(n.kind==="S"){
+    const top=Math.max(...n.kids.map(k=>k.cy)),bot=Math.max(...n.kids.map(k=>k.h-k.cy));
+    n.w=n.kids.reduce((s,k)=>s+k.w,0)+GAP*(n.kids.length-1);n.h=top+bot;n.cy=top;
+  }else{
+    n.mw=Math.max(...n.kids.map(k=>k.w));
+    n.w=n.mw+2*PAD;n.h=n.kids.reduce((s,k)=>s+k.h,0)+PG*(n.kids.length-1);n.cy=n.kids[0].cy;
+  }
+}
+const ln=(x1,y1,x2,y2)=>`<line class="w" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+const dot=(x,y)=>`<circle class="dot" cx="${x}" cy="${y}" r="3.5"/>`;
+function paint(n,x,y){
+  if(n.kind==="R")return `<path class="w" transform="translate(${x} ${y+n.cy})" d="${ZZ}"/><text class="lbl" x="${x+40}" y="${y+n.cy-16}">${n.label}</text>`;
+  let s="";
+  if(n.kind==="S"){
+    let cx=x;
+    n.kids.forEach((k,i)=>{
+      s+=paint(k,cx,y+n.cy-k.cy);
+      if(i<n.kids.length-1)s+=ln(cx+k.w,y+n.cy,cx+k.w+GAP,y+n.cy);
+      cx+=k.w+GAP;
+    });
+  }else{
+    let ys=y;const last=n.kids.length-1;
+    n.kids.forEach((k,i)=>{
+      const kx=x+PAD+(n.mw-k.w)/2,wy=ys+k.cy;
+      s+=paint(k,kx,ys)+ln(x,wy,kx,wy)+ln(kx+k.w,wy,x+n.w,wy);
+      if(i<last)s+=dot(x,wy)+dot(x+n.w,wy);
+      if(i===last)s+=ln(x,y+n.cy,x,wy)+ln(x+n.w,y+n.cy,x+n.w,wy);
+      ys+=k.h+PG;
+    });
+  }
+  return s;
+}
+function draw(){
+  const r=st.root;measure(r);
+  const X=110,Y=14,W=X+r.w+40,top=Y+r.cy,bot=Y+r.h+26,H=bot+14,mid=(top+bot)/2;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Circuit schematic with ${st.rows.length-1} resistors">`;
+  s+=paint(r,X,Y);
+  s+=ln(48,top,X,top);
+  s+=`<path class="w" d="M${X+r.w} ${top}H${W-20}V${bot}H48V${mid+6}"/>`;
+  s+=ln(48,top,48,mid-6);
+  s+=`<line class="w" x1="30" y1="${mid-6}" x2="66" y2="${mid-6}"/><line class="w" x1="38" y1="${mid+6}" x2="58" y2="${mid+6}" style="stroke-width:5"/>`;
+  s+=`<text class="lbl" x="22" y="${mid+4}" style="text-anchor:end">Vs</text>`;
+  s+=`<text class="lbl" x="74" y="${mid-12}" style="text-anchor:start">+</text>`;
+  $("#diagram").innerHTML=s+"</svg>";
+}
+
+/* ---------- table ---------- */
+function table(){
+  const U={P:["Power","W","watts"],V:["Voltage","V","volts"],I:["Current","A","amps"],R:["Resistance","Ω","ohms"]};
+  const cols=[st.root,...st.rows.slice(0,-1)];
+  let h="<thead><tr><th scope=\"col\">Quantity</th>"+cols.map((r,i)=>`<th scope="col"${i?"":' class="tc"'}>${r.label}</th>`).join("")+"</tr></thead><tbody>";
+  ["P","V","I","R"].forEach(k=>{
+    h+=`<tr><th scope="row">${U[k][0]}<small>${U[k][1]}</small></th>`;
+    cols.forEach((r,i)=>{
+      const c=st.cells.find(x=>x.row===r&&x.k===k),cl=i?"":' tc';
+      if(st.given.has(c))h+=`<td class="given${cl}">${fmt(c.val)}</td>`;
+      else h+=`<td class="${cl.trim()}"><input type="text" inputmode="decimal" autocomplete="off" data-r="${st.rows.indexOf(r)}" data-k="${k}" aria-label="${r.label} ${U[k][0].toLowerCase()} in ${U[k][2]}"></td>`;
+    });
+    h+="</tr>";
+  });
+  $("#tbl").innerHTML=h+"</tbody>";
+}
+const inputs=()=>[...document.querySelectorAll("#tbl input")];
+const ansOf=i=>st.rows[+i.dataset.r].ans[i.dataset.k];
+
+function check(){
+  let ok=0,blank=0;const all=inputs();
+  all.forEach(i=>{
+    i.classList.remove("ok","bad","shown");
+    const raw=i.value.trim().replace(",",".");
+    if(!raw){blank++;return}
+    const v=parseFloat(raw),a=ansOf(i);
+    if(isFinite(v)&&Math.abs(v-a)<=0.02*Math.abs(a)){i.classList.add("ok");ok++}
+    else i.classList.add("bad");
+  });
+  const m=$("#msg");
+  if(ok===all.length)m.textContent="All "+all.length+" correct. Nice work.";
+  else m.textContent=ok+" of "+all.length+" correct"+(blank?", "+blank+" still blank":"")+". Fix the red cells and check again.";
+}
+function reveal(){
+  inputs().forEach(i=>{i.value=fmt(ansOf(i),3);i.classList.remove("ok","bad");i.classList.add("shown")});
+  $("#msg").textContent="Answers shown, rounded to 3 significant figures.";
+}
+$("#check").addEventListener("click",check);
+$("#reveal").addEventListener("click",reveal);
+$("#new").addEventListener("click",newProblem);
+document.querySelectorAll(".tab button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tab button").forEach(x=>{x.classList.toggle("active",x===b);x.setAttribute("aria-pressed",x===b)});
+  newProblem();
+}));
+$("#tbl").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.tagName==="INPUT")check()});
+$("#tbl").addEventListener("input",e=>{e.target.classList.remove("ok","bad","shown")});
+newProblem();
+})();
+</script>
+</body>
+</html>
