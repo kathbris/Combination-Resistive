@@ -52,11 +52,9 @@ p#footer{width:100%;margin:45px 0 0 0;padding-top:15px;border-top:1px solid;text
 <body id="mse">
 <h1>Series-parallel circuit practice</h1>
 <h2>Fill in every blank cell. The shaded cells are given.</h2>
-<div class="tab" role="group" aria-label="Number of resistors">
-  <button data-size="0" class="active" aria-pressed="true">Any size</button>
-  <button data-size="3" aria-pressed="false">3 resistors</button>
-  <button data-size="4" aria-pressed="false">4 resistors</button>
-  <button data-size="5" aria-pressed="false">5 resistors</button>
+<div class="tab" role="group" aria-label="Power in the problem">
+  <button data-power="1" class="active" aria-pressed="true">Include power</button>
+  <button data-power="0" aria-pressed="false">No power</button>
 </div>
 <div class="grid">
   <div>
@@ -87,7 +85,7 @@ p#footer{width:100%;margin:45px 0 0 0;padding-top:15px;border-top:1px solid;text
 (function(){
 const KEYS=["V","I","R","P"];
 const RVALS=[47,68,100,150,220,330,470,680,1000];
-const VVALS=[24,36,48,60,80,100,120,240];
+const VVALS=[5,9,12,15,24,36,48];
 const TEMPLATES=[
  ["S","R",["P","R","R"]],
  ["S",["P","R","R"],"R"],
@@ -143,9 +141,8 @@ function propagate(all){
 }
 
 function newProblem(){
-  const want=+document.querySelector(".tab button.active").dataset.size;
-  const opts=TEMPLATES.filter(t=>!want||count(t)===want);
-  const tpl=pick(opts),c={n:0,all:[],leaves:[]};
+  const keys=document.querySelector(".tab button.active").dataset.power==="1"?KEYS:["V","I","R"];
+  const tpl=pick(TEMPLATES),c={n:0,all:[],leaves:[]};
   const root=mk(tpl,c);
   const rs=shuffle(RVALS);
   c.leaves.forEach((l,i)=>l.fixed=rs[i]);
@@ -158,17 +155,17 @@ function newProblem(){
   run(()=>{c.leaves.forEach(l=>l.q.R=l.fixed);root.q.V=vs});
   const rows=[...c.leaves,root];
   rows.forEach(r=>r.ans={...r.q});
-  const cells=rows.flatMap(r=>KEYS.map(k=>({row:r,k,val:r.ans[k]})));
+  const cells=rows.flatMap(r=>keys.map(k=>({row:r,k,val:r.ans[k]})));
   const solvable=set=>{
     run(()=>set.forEach(x=>{x.row.q[x.k]=x.val}));
-    return rows.every(r=>KEYS.every(k=>r.q[k]!=null));
+    return rows.every(r=>keys.every(k=>r.q[k]!=null));
   };
   const given=new Set(cells);
   for(const x of shuffle(cells)){
     given.delete(x);
     if(!solvable([...given]))given.add(x);
   }
-  st={root,rows,given,cells,all:c.all};
+  st={root,rows,given,cells,keys,all:c.all};
   draw();table();
   $("#msg").textContent="";
 }
@@ -230,7 +227,7 @@ function table(){
   const U={P:["Power","W","watts"],V:["Voltage","V","volts"],I:["Current","A","amps"],R:["Resistance","Ω","ohms"]};
   const cols=[st.root,...st.rows.slice(0,-1)];
   let h="<thead><tr><th scope=\"col\">Quantity</th>"+cols.map((r,i)=>`<th scope="col"${i?"":' class="tc"'}>${r.label}</th>`).join("")+"</tr></thead><tbody>";
-  ["P","V","I","R"].forEach(k=>{
+  ["P","V","I","R"].filter(k=>st.keys.includes(k)).forEach(k=>{
     h+=`<tr><th scope="row">${U[k][0]}<small>${U[k][1]}</small></th>`;
     cols.forEach((r,i)=>{
       const c=st.cells.find(x=>x.row===r&&x.k===k),cl=i?"":' tc';
